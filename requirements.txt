@@ -1,0 +1,13 @@
+numpy
+fastapi
+clean-dotenv
+faiss-cpu==1.10.0
+transformers
+ollama
+openai
+langchain
+langchain-core
+langchain-ollama
+langchain-openai
+langchain-huggingface
+langchain-community
