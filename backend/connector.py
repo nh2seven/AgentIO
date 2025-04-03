@@ -1,8 +1,9 @@
 from transformers import pipeline
 from langchain.prompts import PromptTemplate
-from langchain_community.llms import Ollama, OpenAI
-from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
-from langchain.chains import LLMChain
+from langchain_ollama import OllamaLLM
+from langchain_openai import OpenAI
+from langchain_huggingface import HuggingFacePipeline
+from langchain_core.runnables import RunnableSequence
 
 
 # Class for different connector implementations for various providers
@@ -43,7 +44,7 @@ class Connector:
     # Function to initialize the LLM based on the provider
     def init_llm(self):
         if self.provider == "ollama":
-            return Ollama(model=self.model)
+            return OllamaLLM(model=self.model)
 
         elif self.provider == "openai":
             if not self.api_key:
@@ -59,8 +60,8 @@ class Connector:
 
     # Function to query the LLM with context and question
     def query(self, context, question):
-        llm_chain = LLMChain(llm=self.llm, prompt=self.prompt)
-        return llm_chain.run(context=context, question=question)
+        chain = self.prompt | self.llm
+        return chain.invoke({"context": context, "question": question})
 
 
 # Example usage, to be removed later
