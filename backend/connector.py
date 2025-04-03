@@ -3,7 +3,6 @@ from langchain.prompts import PromptTemplate
 from langchain_ollama import OllamaLLM
 from langchain_openai import OpenAI
 from langchain_huggingface import HuggingFacePipeline
-from langchain_core.runnables import RunnableSequence
 
 
 # Class for different connector implementations for various providers
@@ -27,9 +26,7 @@ class Connector:
         self.provider = provider.lower()
         self.model = model or self.default_model(provider)
         self.api_key = api_key
-        self.prompt = PromptTemplate(
-            template=self.template, input_variables=["context", "question"]
-        )
+        self.prompt = PromptTemplate(template=self.template, input_variables=["context", "question"])
         self.llm = self.init_llm()
 
     # Function to get the default model based on the provider
