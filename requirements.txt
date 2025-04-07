@@ -1,6 +1,9 @@
 numpy
 fastapi
 clean-dotenv
+camelot-py
+tabula-py
+fitz-utils
 faiss-cpu==1.10.0
 transformers
 ollama
