@@ -14,18 +14,26 @@ class DocumentLoader:
     def __init__(self):
         self.docs = []
 
-    # Function to load and extract data from PDF files
-    def load_pdf(self, pdf_path):
-
-        # Extract raw text using PyMuPDF
+    # Function to extract text and tables from PDF files
+    def get_text(self, pdf_path):
         try:
             pdf = fitz.open(pdf_path)
             text = "\n".join([page.get_text() for page in pdf])
-            self.docs.append(Document(page_content=text, metadata={"source": pdf_path}))
+            self.docs.append(
+                Document(
+                    page_content=text, 
+                    metadata={
+                        "source": pdf_path, 
+                        "type": "text"
+                        },
+                    )
+                )
         except Exception as e:
             logger.warning(f"[PDF TEXT FAIL] {pdf_path}: {e}")
+        return self.docs
 
-        # Camelot tables
+    # Function to extract tables from PDF files using Camelot; fallback to Tabula if Camelot fails
+    def get_tables(self, pdf_path):
         try:
             tables = camelot.read_pdf(pdf_path, pages="all", flavor="lattice")
             for i, table in enumerate(tables):
@@ -33,26 +41,41 @@ class DocumentLoader:
                 self.docs.append(
                     Document(
                         page_content=md_table,
-                        metadata={"source": pdf_path, "type": "table", "table_no": i},
+                        metadata={
+                            "source": pdf_path,
+                            "type": "table",
+                            "table_no": i,
+                            "extractor": "camelot",
+                        },
                     )
                 )
         except Exception as e:
-            logger.warning(f"[CAMELT FAIL] {pdf_path}: {e}")
+            logger.warning(f"[CAMELOT FAIL] {pdf_path}: {e}")
 
-        # Tabula fallback
-        try:
-            tabula_tables = read_pdf(pdf_path, pages="all", multiple_tables=True)
-            for i, df in enumerate(tabula_tables):
-                md_table = df.to_markdown()
-                self.docs.append(
-                    Document(
-                        page_content=md_table,
-                        metadata={"source": pdf_path, "type": "table", "table_no": i},
+            try:
+                tabula_tables = read_pdf(pdf_path, pages="all", multiple_tables=True)
+                for i, df in enumerate(tabula_tables):
+                    md_table = df.to_markdown()
+                    self.docs.append(
+                        Document(
+                            page_content=md_table,
+                            metadata={
+                                "source": pdf_path,
+                                "type": "table",
+                                "table_no": i,
+                                "extractor": "tabula",
+                            },
+                        )
                     )
-                )
-        except Exception as e:
-            logger.warning(f"[TABULA FAIL] {pdf_path}: {e}")
+            except Exception as e:
+                logger.warning(f"[TABULA FAIL] {pdf_path}: {e}")
 
+        return self.docs
+
+    # Function to load both text and tables from PDF files
+    def load_pdf(self, pdf_path):
+        self.get_text(pdf_path)
+        self.get_tables(pdf_path)
         return self.docs
 
     # Function to load and extract data from text files
@@ -89,9 +112,7 @@ class VectorStore:
         if embedding_type == "ollama":
             return OllamaEmbeddings(model=model_name or "mistral")
         elif embedding_type == "huggingface":
-            return HuggingFaceEmbeddings(
-                model_name=model_name or "sentence-transformers/all-MiniLM-L6-v2"
-            )
+            return HuggingFaceEmbeddings(model_name=model_name or "sentence-transformers/all-MiniLM-L6-v2")
         else:
             raise ValueError(f"Unsupported embedding type: {embedding_type}")
 
